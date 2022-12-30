@@ -1,4 +1,5 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
+#  Copyright (C) 2022  Team HackTrack Linux
 #  Copyright (C) 2009  Sebastian Garcia
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -26,6 +27,8 @@
 # See LICENSE for details.
 #
 # CHANGELOG
+# 0.7
+#  - Convert python code to python3
 # 0.6
 #  - Added some more chars to the command injection prevention.
 #  - Clients decide the nmap scanning rate.
@@ -41,7 +44,7 @@
 try:
 	from OpenSSL import SSL
 except:
-	print 'You need openssl libs for python. apt-get install python-openssl'
+	print('You need openssl libs for python. apt-get install python-openssl')
 	exit(-1)
 
 import sys
@@ -51,7 +54,7 @@ try:
 	from twisted.protocols.basic import LineReceiver
 	from twisted.internet import ssl, reactor
 except:
-	print 'You need twisted libs for python. apt-get install python-twisted'
+	print('You need twisted libs for python. apt-get install python-twisted')
 	exit(-1)
 
 
@@ -60,11 +63,16 @@ from subprocess import Popen
 from subprocess import PIPE
 import os
 import random
-
+# import module
+from art import *
+  
+# random large text to art representation 
+# This art will be random every time
+tprint("dnmap Client","rnd")
 # Global variables
 server_ip = False
 server_port = 46001 
-vernum = '0.6'
+vernum = '0.7'
 # Your name alias defaults to anonymous
 alias='Anonymous'
 debug=False
@@ -73,41 +81,40 @@ maxrate = False
 # End global variables
 
 
+
 # Print version information and exit
 def version():
-  print "+----------------------------------------------------------------------+"
-  print "| dnmap Client Version "+ vernum +"                                             |"
-  print "| This program is free software; you can redistribute it and/or modify |"
-  print "| it under the terms of the GNU General Public License as published by |"
-  print "| the Free Software Foundation; either version 2 of the License, or    |"
-  print "| (at your option) any later version.                                  |"
-  print "|                                                                      |"
-  print "| Author: Garcia Sebastian, eldraco@gmail.com                          |"
-  print "| www.mateslab.com.ar                                                  |"
-  print "+----------------------------------------------------------------------+"
-  print
+  print("+----------------------------------------------------------------------+")
+  print("| dnmap Client Version "+ vernum +"                                    |")
+  print("| dnmap is a framework to distribute nmap scans among several clients. |")
+  print("| It reads an already created file with nmap commands and send         |")
+  print("| those commands to each client connected to it.                       |")
+  print("|                                                                      |")
+  print("| Author: Team HackTrack Linux, team@hacktracklinux.org                |")
+  print("| www.hacktracklinux.org                                               |")
+  print("+----------------------------------------------------------------------+")
+  print()
 
 
 # Print help information and exit:
 def usage():
-  print "+----------------------------------------------------------------------+"
-  print "| dnmap Client Version "+ vernum +"                                             |"
-  print "| This program is free software; you can redistribute it and/or modify |"
-  print "| it under the terms of the GNU General Public License as published by |"
-  print "| the Free Software Foundation; either version 2 of the License, or    |"
-  print "| (at your option) any later version.                                  |"
-  print "|                                                                      |"
-  print "| Author: Garcia Sebastian, eldraco@gmail.com                          |"
-  print "| www.mateslab.com.ar                                                  |"
-  print "+----------------------------------------------------------------------+"
-  print "\nusage: %s <options>" % sys.argv[0]
-  print "options:"
-  print "  -s, --server-ip        IP address of dnmap server."
-  print "  -p, --server-port      Port of dnmap server. Dnmap port defaults to 46001"
-  print "  -a, --alias      Your name alias so we can give credit to you for your help. Optional"
-  print "  -d, --debug      Debuging."
-  print "  -m, --max-rate      Force nmaps commands to use at most this rate. Useful to slow nmap down. Adds the --max-rate parameter."
-  print
+  print("+----------------------------------------------------------------------+")
+  print("| dnmap Client Version "+ vernum +"                                    |")
+  print("| dnmap is a framework to distribute nmap scans among several clients. |")
+  print("| It reads an already created file with nmap commands and send         |")
+  print("| those commands to each client connected to it.                       |")
+  print("|                                                                      |")
+  print("| Author: Team HackTrack Linux, team@hacktracklinux.org                |")
+  print("| www.hacktracklinux.org                                               |")
+  print("+----------------------------------------------------------------------+")
+  print("\nusage: %s <options>" % sys.argv[0])
+  print("options:")
+  print("  -s, --server-ip        IP address of dnmap server.")
+  print("  -p, --server-port      Port of dnmap server. Dnmap port defaults to 46001")
+  print("  -a, --alias      Your name alias so we can give credit to you for your help. Optional")
+  print("  -d, --debug      Debuging.")
+  print("  -m, --max-rate      Force nmaps commands to use at most this rate. Useful to slow nmap down. Adds the --max-rate parameter.")
+  print()
   sys.exit(1)
 
 
@@ -123,10 +130,10 @@ def check_clean(line):
 		return ret
 
 	except Exception as inst:
-		print 'Problem in dataReceived function'
-		print type(inst)
-		print inst.args
-		print inst
+		print('Problem in dataReceived function')
+		print(type(inst))
+		print(inst.args)
+		print(inst)
 
 
 
@@ -137,10 +144,10 @@ class NmapClient(LineReceiver):
 		global client_id
 		global alias
 		global debug
-		print 'Client connected succesfully...'
-		print 'Waiting for more commands....'
+		print('Client connected succesfully...')
+		print('Waiting for more commands....')
 		if debug:
-			print ' -- Your client ID is: {0} , and your alias is: {1}'.format(str(client_id), str(alias))
+			print(' -- Your client ID is: {0} , and your alias is: {1}'.format(str(client_id), str(alias)))
 
 		euid = os.geteuid()
 
@@ -155,13 +162,13 @@ class NmapClient(LineReceiver):
 		# 'Client ID' text must be sent to receive another command
 		line = 'Starts the Client ID:{0}:Alias:{1}:Version:{2}:ImRoot:{3}'.format(str(client_id),str(alias),vernum,iamroot)
 		if debug:
-			print ' -- Line sent: {0}'.format(line)
+			print(' -- Line sent: {0}'.format(line))
 		self.sendLine(line)
 
 		#line = 'Send more commands to Client ID:{0}:Alias:{1}:\0'.format(str(client_id),str(alias))
 		line = 'Send more commands'
 		if debug:
-			print ' -- Line sent: {0}'.format(line)
+			print(' -- Line sent: {0}'.format(line))
 		self.sendLine(line)
 
 	
@@ -181,12 +188,12 @@ class NmapClient(LineReceiver):
 			#line = 'Send more commands to Client ID:{0}:Alias:{1}:'.format(str(client_id),str(alias))
 			line = 'Send more commands'
 			if debug:
-				print ' -- Line sent: {0}'.format(line)
+				print(' -- Line sent: {0}'.format(line))
 			self.sendLine(line)
 		else:
 			# dataReceived does not wait for end of lines or CR nor LF
 			if debug:
-				print "\tCommand Received: {0}".format(line.strip('\n').strip('\r'))
+				print("\tCommand Received: {0}".format(line.strip('\n').strip('\r')))
 		
 			# A little bit of protection from the server
 			if check_clean(line):
@@ -195,7 +202,7 @@ class NmapClient(LineReceiver):
 					nmap_output_file = line.split('-oA ')[1].split(' ')[0].strip(' ')
 				except IndexError:
 					random_file_name = str(random.randrange(0, 100000000, 1))
-					print '+ No -oA given. We add it anyway so not to lose the results. Added -oA '+random_file_name
+					print('+ No -oA given. We add it anyway so not to lose the results. Added -oA '+random_file_name)
 					line = line + '-oA '+random_file_name
 					nmap_output_file = line.split('-oA ')[1].split(' ')[0].strip(' ')
 
@@ -226,7 +233,7 @@ class NmapClient(LineReceiver):
 					nmap_command_string = ''
 					for i in nmap_command:
 						nmap_command_string = nmap_command_string + i + ' '
-					print "\tCommand Executed: {0}".format(nmap_command_string)
+					print("\tCommand Executed: {0}".format(nmap_command_string))
 
 
 					# For some reason this executable thing does not work! seems to change nmap sP for sS
@@ -237,19 +244,19 @@ class NmapClient(LineReceiver):
 					nmap_returncode = nmap_process.returncode
 					
 				except OSError:
-					print 'You don\'t have nmap installed. You can install it with apt-get install nmap'
+					print('You don\'t have nmap installed. You can install it with apt-get install nmap')
 					exit(-1)
 
 				except ValueError:
 					raw_nmap_output = 'Invalid nmap arguments.'
-					print raw_nmap_output
+					print(raw_nmap_output)
 
 
 				except Exception as inst:
-					print 'Problem in dataReceived function'
-					print type(inst)
-					print inst.args
-					print inst
+					print('Problem in dataReceived function')
+					print(type(inst))
+					print(inst.args)
+					print(inst)
 
 
 
@@ -257,17 +264,17 @@ class NmapClient(LineReceiver):
 					# Nmap ended ok
 
 					# Tell the server that we are sending the nmap output
-					print '\tSending output to the server...'
+					print('\tSending output to the server...')
 					#line = 'Nmap Output File:{0}:{1}:{2}:'.format(nmap_output_file.strip('\n').strip('\r'),str(client_id),str(alias))
 					line = 'Nmap Output File:{0}:'.format(nmap_output_file.strip('\n').strip('\r'))
 					if debug:
-						print ' -- Line sent: {0}'.format(line)
+						print(' -- Line sent: {0}'.format(line))
 					self.sendLine(line)
 					self.sendLine(raw_nmap_output)
 					#line = 'Nmap Output Finished:{0}:{1}:{2}:'.format(nmap_output_file.strip('\n').strip('\r'),str(client_id),str(alias))
 					line = 'Nmap Output Finished:{0}:'.format(nmap_output_file.strip('\n').strip('\r'))
 					if debug:
-						print ' -- Line sent: {0}'.format(line)
+						print(' -- Line sent: {0}'.format(line))
 					self.sendLine(line)
 
 					# Move nmap output files to its directory
@@ -277,19 +284,19 @@ class NmapClient(LineReceiver):
 
 					# Ask for another command.
 					# 'Client ID' text must be sent to receive another command
-					print 'Waiting for more commands....'
+					print('Waiting for more commands....')
 					#line = 'Send more commands to Client ID:{0}:Alias:{1}:'.format(str(client_id),str(alias))
 					line = 'Send more commands'
 					if debug:
-						print ' -- Line sent: {0}'.format(line)
+						print(' -- Line sent: {0}'.format(line))
 					self.sendLine(line)
 			else:
 				# Something strange was sent to us...
-				print
-				print 'WARNING! Ignoring some strange command was sent to us: {0}'.format(line)
+				print()
+				print('WARNING! Ignoring some strange command was sent to us: {0}'.format(line))
 				line = 'Send more commands'
 				if debug:
-					print ' -- Line sent: {0}'.format(line)
+					print(' -- Line sent: {0}'.format(line))
 				self.sendLine(line)
 
 
@@ -300,24 +307,24 @@ class NmapClientFactory(ReconnectingClientFactory):
 		protocol = NmapClient
 
 		def startedConnecting(self, connector):
-			print 'Starting connection...'
+			print('Starting connection...')
 
 		def clientConnectionFailed(self, connector, reason):
-			print 'Connection failed:', reason.getErrorMessage()
+			print('Connection failed:', reason.getErrorMessage())
 			# Try to reconnect
-			print 'Trying to reconnect. Please wait...'
+			print('Trying to reconnect. Please wait...')
 			ReconnectingClientFactory.clientConnectionLost(self, connector, reason)
 
 		def clientConnectionLost(self, connector, reason):
-			print 'Connection lost. Reason: {0}'.format(reason.getErrorMessage())
+			print('Connection lost. Reason: {0}'.format(reason.getErrorMessage()))
 			# Try to reconnect
-			print 'Trying to reconnect in 10 secs. Please wait...'
+			print('Trying to reconnect in 10 secs. Please wait...')
 			ReconnectingClientFactory.clientConnectionLost(self, connector, reason)
 	except Exception as inst:
-		print 'Problem in NmapClientFactory'
-		print type(inst)
-		print inst.args
-		print inst
+		print('Problem in NmapClientFactory')
+		print(type(inst))
+		print(inst.args)
+		print(inst)
 
 
 
@@ -329,13 +336,13 @@ def process_commands():
 	global factory
 	try:
 
-		print 'Client Started...'
+		print('Client Started...')
 
 		# Generate the client unique ID
 		client_id = str(random.randrange(0, 100000000, 1))
 
 		# Create the output directory
-		print 'Nmap output files stored in \'nmap_output\' directory...'
+		print('Nmap output files stored in \'nmap_output\' directory...')
 		os.system('mkdir nmap_output > /dev/null 2>&1')
 
 		factory = NmapClientFactory()
@@ -346,10 +353,10 @@ def process_commands():
 		#reactor.addSystemEventTrigger('before','shutdown',myCleanUpFunction)
 		reactor.run()
 	except Exception as inst:
-		print 'Problem in process_commands function'
-		print type(inst)
-		print inst.args
-		print inst
+		print('Problem in process_commands function')
+		print(type(inst))
+		print(inst.args)
+		print(inst)
 
 
 
@@ -386,7 +393,7 @@ def main():
 
 	except KeyboardInterrupt:
 		# CTRL-C pretty handling.
-		print "Keyboard Interruption!. Exiting."
+		print("Keyboard Interruption!. Exiting.")
 		sys.exit(1)
 
 
