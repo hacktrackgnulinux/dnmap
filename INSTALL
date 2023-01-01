@@ -1,0 +1,3 @@
+for HackTrack Linux Only
+pip install art twisted
+apt install python3-openssl
