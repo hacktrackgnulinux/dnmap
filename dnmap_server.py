@@ -1,4 +1,5 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
+#  Copyright (C) 2022  Team HackTrack Linux
 #  Copyright (C) 2009  Sebastian Garcia
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -21,20 +22,23 @@
 #
 # Based on code from Twisted examples.
 # Copyright (c) Twisted Matrix Laboratories.
+
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
 #
 # CHANGELOG
+# 0.7
+#  - Convert python code to python3
 # 0.6
-#  - Verify that the server.pem file exists
-#
+#  - Added some more chars to the command injection prevention.
+#  - Clients decide the nmap scanning rate.
+#  - If the server sends a --min-rate parameter, we now delete it. WE control the scan speed.
+#  - Clients decide the nmap scanning rate.
+#  - Exit if nmap is not installed
+#  - Stop sending the euid, it was a privacy violation. Now we just say if we are root or not.
 #
 # TODO
-# - If the client is processing a command and the servers goes down, do we lost that command!
-# - Client authentication / registration?
-# - Add libraries dependecy list
-# - Sort the stats by some field
-# - Put colors to the list
-# - Show the ETA
-# - Show progress status
+# - privileges on nmap
 #
 
 import logging
@@ -46,14 +50,14 @@ try:
 	from twisted.python import log
 	from twisted.python.logfile import DailyLogFile
 except:
-	print 'You need twisted library. apt-get install python-twisted-bin python-twisted-core'
+	print('You need twisted library. apt-get install python-twisted-bin python-twisted-core')
 	exit(-1)
 
 import getopt, sys, time, os
 try:
 	from OpenSSL import SSL
 except:
-	print 'You need python openssl library. apt-get install python-openssl'
+	print('You need python openssl library. apt-get install python-openssl')
 	exit(-1)
 
 
@@ -98,45 +102,43 @@ pemfile = 'server.pem'
 
 # Print version information and exit
 def version():
-  print "+----------------------------------------------------------------------+"
-  print "| dnmap_server Version "+ vernum +"                                             |"
-  print "| This program is free software; you can redistribute it and/or modify |"
-  print "| it under the terms of the GNU General Public License as published by |"
-  print "| the Free Software Foundation; either version 2 of the License, or    |"
-  print "| (at your option) any later version.                                  |"
-  print "|                                                                      |"
-  print "| Author: Garcia Sebastian, eldraco@gmail.com                          |"
-  print "| www.mateslab.com.ar                                                  |"
-  print "+----------------------------------------------------------------------+"
-  print
+  print("+----------------------------------------------------------------------+")
+  print("| dnmap_server Version "+ vernum +"                                    |")
+  print("| dnmap is a framework to distribute nmap scans among several clients. |")
+  print("| It reads an already created file with nmap commands and send         |")
+  print("| those commands to each client connected to it.                       |")
+  print("|                                                                      |")
+  print("| Author: Team HackTrack Linux, team@hacktracklinux.org                |")
+  print("| www.hacktracklinux.org                                               |")
+  print("+----------------------------------------------------------------------+")
+  print()
 
 
 # Print help information and exit:
 def usage():
-  print "+----------------------------------------------------------------------+"
-  print "| dnmap_server Version "+ vernum +"                                             |"
-  print "| This program is free software; you can redistribute it and/or modify |"
-  print "| it under the terms of the GNU General Public License as published by |"
-  print "| the Free Software Foundation; either version 2 of the License, or    |"
-  print "| (at your option) any later version.                                  |"
-  print "|                                                                      |"
-  print "| Author: Garcia Sebastian, eldraco@gmail.com                          |"
-  print "| www.mateslab.com.ar                                                  |"
-  print "+----------------------------------------------------------------------+"
-  print "\nusage: %s <options>" % sys.argv[0]
-  print "options:"
-  print "  -f, --nmap-commands        Nmap commands file"
-  print "  -p, --port        TCP port where we listen for connections."
-  print "  -L, --log-file        Log file. Defaults to /var/log/dnmap_server.conf."
-  print "  -l, --log-level       Log level. Defaults to info."
-  print "  -v, --verbose_level         Verbose level. Give a number between 1 and 5. Defaults to 1. Level 0 means be quiet."
-  print "  -t, --client-timeout         How many time should we wait before marking a client Offline. We still remember its values just in case it cames back."
-  print "  -s, --sort         	Field to sort the statical value. You can choose from: Alias, #Commands, UpTime, RunCmdXMin, AvrCmdXMin, Status"
-  print "  -P, --pem-file         pem file to use for TLS connection. By default we use the server.pem file provided with the server in the current directory."
-  print
-  print "dnmap_server uses a \'<nmap-commands-file-name>.dnmaptrace\' file to know where it must continue reading the nmap commands file. If you want to start over again,"
-  print "just delete the \'<nmap-commands-file-name>.dnmaptrace\' file"
-  print
+  print("+----------------------------------------------------------------------+")
+  print("| dnmap_server Version "+ vernum +"                                    |")
+  print("| dnmap is a framework to distribute nmap scans among several clients. |")
+  print("| It reads an already created file with nmap commands and send         |")
+  print("| those commands to each client connected to it.                       |")
+  print("|                                                                      |")
+  print("| Author: Team HackTrack Linux, team@hacktracklinux.org                |")
+  print("| www.hacktracklinux.org                                               |")
+  print("+----------------------------------------------------------------------+")
+  print("\nusage: %s <options>" % sys.argv[0])
+  print("options:")
+  print("  -f, --nmap-commands        Nmap commands file")
+  print("  -p, --port        TCP port where we listen for connections.")
+  print("  -L, --log-file        Log file. Defaults to /var/log/dnmap_server.conf.")
+  print("  -l, --log-level       Log level. Defaults to info.")
+  print("  -v, --verbose_level         Verbose level. Give a number between 1 and 5. Defaults to 1. Level 0 means be quiet.")
+  print("  -t, --client-timeout         How many time should we wait before marking a client Offline. We still remember its values just in case it cames back.")
+  print("  -s, --sort         	Field to sort the statical value. You can choose from: Alias, #Commands, UpTime, RunCmdXMin, AvrCmdXMin, Status")
+  print("  -P, --pem-file         pem file to use for TLS connection. By default we use the server.pem file provided with the server in the current directory.")
+  print()
+  print("dnmap_server uses a \'<nmap-commands-file-name>.dnmaptrace\' file to know where it must continue reading the nmap commands file. If you want to start over again,")
+  print("just delete the \'<nmap-commands-file-name>.dnmaptrace\' file")
+  print()
   sys.exit(1)
 
 
@@ -161,16 +163,16 @@ def timeout_idle_clients():
 		if verbose_level > 2:
 			msgline = 'Problem in mark_as_idle function'
 			mlog.error(msgline)
-			print msgline
+			print(msgline)
 			msgline = type(inst)
 			mlog.error(msgline)
-			print msgline
+			print(msgline)
 			msgline = inst.args
 			mlog.error(msgline)
-			print msgline
+			print(msgline)
 			msgline = inst
 			mlog.error(msgline)
-			print msgline
+			print(msgline)
 
 
 
@@ -258,7 +260,7 @@ class ServerContextFactory:
 			ctx.use_certificate_file(pemfile)
 			ctx.use_privatekey_file(pemfile)
 		except:
-			print 'You need to have a server.pem file for the server to work. If it is not in your same directory, just point to it with -P parameter'
+			print('You need to have a server.pem file for the server to work. If it is not in your same directory, just point to it with -P parameter')
 		return ctx
 
 
@@ -282,20 +284,20 @@ def show_info():
 
 		if verbose_level > 0:
 			line = '=| MET:{0} | Amount of Online clients: {1} |='.format(diff_time, amount)
-			print line
+			print(line)
 			mlog.info(line)
 
 		if clients != {}:
 			if verbose_level > 1:
 				line = 'Clients connected'
-				print line
+				print(line)
 				mlog.info(line)
 				line = '-----------------'
-				print line
+				print(line)
 				mlog.info(line)
 				#line = 'Alias\t#Commands\tLast Time Seen\t\t\tVersion\tIsRoot\tStatus'
 				line = '{0:15}\t{1}\t{2}\t{3}\t{4}\t\t{5}\t{6}\t{7}\t{8}\t{9}'.format('Alias','#Commands','Last Time Seen', '(time ago)', 'UpTime', 'Version', 'IsRoot', 'RunCmdXMin', 'AvrCmdXMin', 'Status')
-				print line
+				print(line)
 				mlog.info(line)
 				for i in clients:
 					if clients[i]['Status'] != 'Offline':
@@ -321,26 +323,26 @@ def show_info():
 						uptime_diff_mins = int( ((uptime_diff.seconds % 3600) + (uptime_diff.microseconds / 1000000.0)) / 60)
 
 						line = '{0:15}\t{1}\t\t{2}({3:2d}\'{4:2d}\")\t{5:2d}h{6:2d}m\t\t{7}\t{8}\t{9:10.1f}\t{10:9.1f}\t{11}'.format(clients[i]['Alias'], clients[i]['NbrCommands'], lasttime, time_diff_mins, time_diff_secs, uptime_diff_hours, uptime_diff_mins , clients[i]['Version'], clients[i]['IsRoot'], clients[i]['RunCmdsxMin'], clients[i]['AvrCmdsxMin'], clients[i]['Status'])
-						print line
+						print(line)
 						mlog.info(line)
 
-			print
+			print()
 			last_show_time = datetime.datetime.now()
 
 	except Exception as inst:
 		if verbose_level > 2:
 			msgline = 'Problem in show_info function'
 			mlog.error(msgline)
-			print msgline
+			print(msgline)
 			msgline = type(inst)
 			mlog.error(msgline)
-			print msgline
+			print(msgline)
 			msgline = inst.args
 			mlog.error(msgline)
-			print msgline
+			print(msgline)
 			msgline = inst
 			mlog.error(msgline)
-			print msgline
+			print(msgline)
 	
 
 
@@ -359,11 +361,11 @@ def send_one_more_command(ourtransport,client_id):
 		line = 'Data sent to client ID '+client_id+' ('+alias+')'
 		log.msg(line, logLevel=logging.INFO)
 		if verbose_level > 2:
-			print line
+			print(line)
 		line= '\t'+command_to_send.strip('\n')
 		log.msg(line, logLevel=logging.INFO)
 		if verbose_level > 2:
-			print line
+			print(line)
 		ourtransport.transport.write(command_to_send)
 		clients[client_id]['NbrCommands'] += 1
 		clients[client_id]['LastCommand'] = command_to_send
@@ -374,17 +376,17 @@ def send_one_more_command(ourtransport,client_id):
 		line = 'No more commands in queue.'
 		log.msg(line, logLevel=logging.DEBUG)
 		if verbose_level > 2:
-			print line
+			print(line)
 		line = '\tMaking the client '+str(client_id)+' ('+str(alias)+')'+' wait 10 secs for new commands to arrive...'
 		log.msg(line, logLevel=logging.DEBUG)
 		if verbose_level > 2:
-			print line
+			print(line)
 		ourtransport.transport.write('Wait:10')
 	except Exception as inst:
-		print 'Problem in Send More Commands'
-		print type(inst)
-		print inst.args
-		print inst
+		print('Problem in Send More Commands')
+		print(type(inst))
+		print(inst.args)
+		print(inst)
 
 
 
@@ -436,7 +438,7 @@ def process_input_line(data,ourtransport,client_id):
 			msgline = 'Client ID connected: {0} ({1})'.format(str(client_id),str(alias))
 			log.msg(msgline, logLevel=logging.INFO)
 			if verbose_level > 1:
-				print '+ '+msgline
+				print('+ '+msgline)
 
 		elif 'Send more commands' in data:
 			alias = clients[client_id]['Alias']
@@ -529,15 +531,15 @@ def process_input_line(data,ourtransport,client_id):
 			trace_file_descriptor.close()
 
 			if verbose_level > 2:
-				print '+ Storing command {0} in trace file.'.format(finished_nmap_command.strip('\n').strip('\r'))
+				print('+ Storing command {0} in trace file.'.format(finished_nmap_command.strip('\n').strip('\r')))
 
 			output_file_descriptor.close()
 
 	except Exception as inst:
-		print 'Problem in process input lines'
-		print type(inst)
-		print inst.args
-		print inst
+		print('Problem in process input lines')
+		print(type(inst))
+		print(inst.args)
+		print(inst)
 
 
 
@@ -567,14 +569,14 @@ class NmapServerProtocol(Protocol):
 			msgline = 'Connection lost in the protocol. Reason:{0}'.format(reason)
 			msgline2 = '+ Connection lost for {0} ({1}).'.format(alias, client_id)
 			log.msg(msgline, logLevel=logging.DEBUG)
-			print msgline2
+			print(msgline2)
 
 			clients[client_id]['Status'] = 'Offline'
 			command_to_redo = clients[client_id]['LastCommand']
 			if command_to_redo != '':
 				nmap_command.append(command_to_redo)
 			if verbose_level > 2:
-				print 'Re inserting command: {0}'.format(command_to_redo)
+				print('Re inserting command: {0}'.format(command_to_redo))
 
 
 	def dataReceived(self, newdata):
@@ -590,7 +592,7 @@ class NmapServerProtocol(Protocol):
 		if verbose_level > 2:
 			log.msg('Data recived', logLevel=logging.DEBUG)
 			log.msg(data, logLevel=logging.DEBUG)
-			print '+ Data received: {0}'.format(data)
+			print('+ Data received: {0}'.format(data))
 
 		for line in data:
 			process_input_line(line,self,client_id)
@@ -668,7 +670,7 @@ def main():
 		try:
 			temp = os.stat(pemfile)
 		except OSError:
-			print 'No pem file given. Use -P'
+			print('No pem file given. Use -P')
 			exit(-1)
 
 
@@ -709,9 +711,10 @@ def main():
 
 	except KeyboardInterrupt:
 		# CTRL-C pretty handling.
-		print "Keyboard Interruption!. Exiting."
+		print("Keyboard Interruption!. Exiting.")
 		sys.exit(1)
 
 
 if __name__ == '__main__':
     main()
+
